@@ -1,0 +1,33 @@
+<html lang="en">
+    <head>
+        <!-- <script src="webgl-demo.js" type="module" defer></script> -->
+        <script>
+            function main()
+            {
+                // const canvas = document.querySelector('#glcanvas');
+                // 换一种创建方式,为了vscode对gl的api补全
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                document.querySelector('body').appendChild(canvas);
+
+                const gl = canvas.getContext('webgl');
+
+                if (gl === null) {
+                    alert('no webgl');
+                    return;
+                }
+
+                gl.clearColor(0.5, 0.5, 0.5, 1.0);// gray
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+
+        </script>
+    </head>
+
+    <body>
+        <!-- <canvas id="glcanvas" width="640" height="480"></canvas> -->
+    </body>
+
+    <script>main();</script>
+</html>

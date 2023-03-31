@@ -1,0 +1,117 @@
+<html lang="en">
+    <head>
+        <!-- <script src="webgl-demo.js" type="module" defer></script> -->
+        <script>
+            var G = {}
+            G.step = 0.01;
+            G.startX = 0.8;
+            function loop()
+            {
+                const gl = G.gl;
+                const program = G.program;//get ref
+
+                //background
+                gl.clearColor(0.5, 0.5, 0.5, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                var x = G.startX;
+                if (x > 1) {
+                    G.step = -G.step;
+                }
+                if (x < 0.1) {
+                    G.step = -G.step;
+                }
+                x = x + G.step;
+                G.startX = x;
+                
+                const vertices = [
+                    // 1
+                    0, 0.5, 0,
+                    -x, -0.5, 0,
+                    0.5, -0.5, 0,
+
+                    // 2
+                    0.5, -0.5, 0,
+                    x, 0.5, 0,
+                    0, 0.5, 0,
+                ];
+                
+
+                const buffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+                const aPos = gl.getAttribLocation(program, 'aPos');
+                gl.enableVertexAttribArray(aPos);
+                gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertices.length);
+            }
+            
+            function main()
+            {
+                // const canvas = document.querySelector('#glcanvas');
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                document.querySelector('body').appendChild(canvas);
+
+                const gl = canvas.getContext('webgl');
+
+                if (gl === null) {
+                    alert('no webgl');
+                    return;
+                }
+
+
+
+
+                const vsSource = `
+                    // 设置浮点数据类型为中级精度
+                    precision mediump float;
+                    attribute vec3 aPos;
+                    void main () {
+                        gl_Position = vec4(aPos, 1.0);
+                    }
+                `;
+                const vsShader = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vsShader, vsSource);
+                gl.compileShader(vsShader);
+
+                console.log('VERTEX_SHADER:', gl.getShaderInfoLog(vsShader));
+
+                const fsSource = `
+                    precision mediump float;
+                    void main() {
+                        gl_FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+                    }
+                `;
+                const fsShader = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fsShader, fsSource);
+                gl.compileShader(fsShader);
+                console.log('FRAGMENT_SHADER:', gl.getShaderInfoLog(fsShader));
+
+                const program = gl.createProgram();
+                gl.attachShader(program, vsShader);
+                gl.attachShader(program, fsShader);
+                gl.linkProgram(program);
+                gl.useProgram(program);
+                console.log('createProgram:', gl.getProgramInfoLog(program));
+
+                
+                G.program = program;//ref
+                G.gl = gl;
+
+                const fps = (1.0 * 1000) / 60;
+                setInterval(loop,  fps);
+            }
+
+        </script>
+    </head>
+
+    <body>
+        <!-- <canvas id="glcanvas" width="640" height="480"></canvas> -->
+    </body>
+
+    <script>main();</script>
+</html>
