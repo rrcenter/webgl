@@ -1,0 +1,122 @@
+<html lang="en">
+    <head>
+        <!-- <script src="webgl-demo.js" type="module" defer></script> -->
+        <script>
+            var App = {}
+            App.step = 0.01;
+            App.startX = 0.8;
+            function loop()
+            {
+                const gl = App.gl;
+                const program = App.program;//get ref
+
+                //background
+                gl.clearColor(0.5, 0.5, 0.5, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                var x = App.startX;
+                if (x > 1) {
+                    App.step = -App.step;
+                }
+                if (x < 0.1) {
+                    App.step = -App.step;
+                }
+                x = x + App.step;
+                App.startX = x;
+                
+                const vertices = [
+                    // 1
+                    0, 0.5, 0,
+                    -x, -0.5, 0,
+                    0.5, -0.5, 0,
+
+                    // 2
+                    0.5, -0.5, 0,
+                    x, 0.5, 0,
+                    0, 0.5, 0,
+                ];
+                
+
+                gl.useProgram(program);
+                const buffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+                const aPos = gl.getAttribLocation(program, 'aPos');
+                gl.enableVertexAttribArray(aPos);
+                gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertices.length);
+            }
+            
+            function main()
+            {
+                // const canvas = document.querySelector('#glcanvas');
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                document.querySelector('body').appendChild(canvas);
+
+                const gl = canvas.getContext('webgl');
+
+                if (gl === null) {
+                    alert('no webgl');
+                    return;
+                }
+
+
+                const vsSource = `
+                    // 设置浮点数据类型为中级精度
+                    precision mediump float;
+                    attribute vec3 aPos;
+                    void main () {
+                        gl_Position = vec4(aPos, 1.0);
+                    }
+                `;
+                const fsSource = `
+                    precision mediump float;
+                    void main() {
+                        gl_FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+                    }
+                `;
+                const program = createShaderProgram(gl, vsSource, fsSource);
+                
+                App.program = program;//ref
+                App.gl = gl;
+
+                const fps = (1.0 * 1000) / 60;
+                setInterval(loop,  fps);
+            }
+
+            function createShaderProgram(gl, vsSource, fsSource) {
+                const vsShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fsShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vsShader);
+                gl.attachShader(shaderProgram, fsShader);
+                gl.linkProgram(shaderProgram);
+
+                console.log('createShaderProgram:', gl.getProgramInfoLog(shaderProgram));
+
+                return shaderProgram;
+            }
+
+            function loadShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                console.log('loadShader:', gl.getShaderInfoLog(shader));
+
+                return shader;
+            }
+        </script>
+    </head>
+
+    <body>
+        <!-- <canvas id="glcanvas" width="640" height="480"></canvas> -->
+    </body>
+
+    <script>main();</script>
+</html>
