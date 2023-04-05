@@ -1,0 +1,228 @@
+<html lang="en">
+    <head>
+        <!-- <script src="webgl-demo.js" type="module" defer></script> -->
+        <script>
+            var App = {}
+            App.step = 0.01;
+            App.startX = 0.8;
+            function loop()
+            {
+                const gl = App.gl;
+                const {program,positions, colors, uvs} = App.programInfo;//get ref
+
+                //background
+                gl.clearColor(0.5, 0.5, 0.5, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+
+                gl.useProgram(program);
+                
+                
+                // position
+                gl.bindBuffer(gl.ARRAY_BUFFER, positions);
+                const aPos = App.programInfo.attribLocations.aPos;
+                gl.enableVertexAttribArray(aPos);
+                gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+                // color
+                gl.bindBuffer(gl.ARRAY_BUFFER, colors);
+                const vColor = App.programInfo.attribLocations.aColor;
+                gl.enableVertexAttribArray(vColor);
+                gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
+                // uvs
+                gl.bindBuffer(gl.ARRAY_BUFFER, uvs);
+                const a_texCoord = App.programInfo.attribLocations.a_texCoord;
+                gl.enableVertexAttribArray(a_texCoord);
+                gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, 0, 0);
+
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+            
+            function main()
+            {
+                // const canvas = document.querySelector('#glcanvas');
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                document.querySelector('body').appendChild(canvas);
+
+                const gl = canvas.getContext('webgl');
+
+                if (gl === null) {
+                    alert('no webgl');
+                    return;
+                }
+
+
+                init(gl);
+
+                const fps = (1.0 * 1000) / 60;
+                setInterval(loop,  fps);
+            }
+
+            function init(gl) {
+                const vsSource = `
+                    // 设置浮点数据类型为中级精度
+                    precision mediump float;
+                    attribute vec3 aPos;
+                    attribute vec4 aColor;
+                    attribute vec2 a_texCoord;
+
+                    varying lowp vec4 vColor;
+                    varying vec2 v_texCoord;
+                    void main () {
+                        gl_Position = vec4(aPos, 1.0);
+                        vColor = aColor;
+                        v_texCoord = a_texCoord;
+                    }
+                `;
+                const fsSource = `
+                    precision mediump float;
+                    varying lowp vec4 vColor;
+                    varying vec2 v_texCoord;
+
+                    uniform sampler2D u_image;
+                    void main() {
+                        gl_FragColor = vColor;
+                        gl_FragColor = texture2D(u_image, v_texCoord);
+                    }
+                `;
+                const program = createShaderProgram(gl, vsSource, fsSource);
+                const {positions,colors,uvs} = createBuffers(gl);
+                const programInfo = {
+                    program: program,
+                    attribLocations: {
+                        aPos: gl.getAttribLocation(program, 'aPos'),
+                        aColor: gl.getAttribLocation(program, 'aColor'),
+                        a_texCoord: gl.getAttribLocation(program, 'a_texCoord'),
+                    },
+                    positions: positions,
+                    colors: colors,
+                    uvs: uvs,
+                }
+                
+                App.programInfo = programInfo;//ref
+                App.gl = gl;
+            }
+            function createShaderProgram(gl, vsSource, fsSource) {
+                const vsShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fsShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vsShader);
+                gl.attachShader(shaderProgram, fsShader);
+                gl.linkProgram(shaderProgram);
+
+                console.log('createShaderProgram:', gl.getProgramInfoLog(shaderProgram));
+
+                return shaderProgram;
+            }
+
+            function loadShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                console.log('loadShader:', gl.getShaderInfoLog(shader));
+
+                return shader;
+            }
+
+            function createBuffers(gl) {
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+                const scale = 0.5;
+                const positions = [
+                    1.0*scale, 1.0*scale, 0,//tr
+                    -1.0*scale, 1.0*scale, 0,//tl
+                    1.0*scale, -1.0*scale, 0,//br
+
+                    -1.0*scale, 1.0*scale, 0,//tl
+                    -1.0*scale, -1.0*scale, 0,//bl
+                    1.0*scale, -1.0*scale, 0,//br
+                    
+                ];
+
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+                var colors = [
+                    1.0,  1.0,  1.0,  1.0,    // white,tr
+                    1.0,  0.0,  0.0,  1.0,    // red,tl
+                    0.0,  1.0,  0.0,  1.0,    // green,br
+
+                    1.0,  0.0,  0.0,  1.0,    // red,tl
+                    0.0,  0.0,  1.0,  1.0,    // blue,bl
+                    0.0,  1.0,  0.0,  1.0,    // green,br
+                ];
+                const colorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+
+                //uvs
+                const uvs = [
+                // 0.0,  0.0,
+                // 1.0,  0.0,
+                // 0.0,  1.0,
+
+                // 0.0,  1.0,
+                // 1.0,  0.0,
+                // 1.0,  1.0
+
+                // // 图像的y反了
+                // 1,1,//tr
+                // 0,1,//tl
+                // 1,0,//br
+
+                // 0,1,//tl
+                // 0,0,//bl
+                // 1,0,//br
+
+                // y = 1 - y 修复反了图像
+                1,0,//tr
+                0,0,//tl
+                1,1,//br
+
+                0,0,//tl
+                0,1,//bl
+                1,1,//br
+                ];
+                var texCoordLocation = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, texCoordLocation);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+
+                const image = App.image;
+                var texture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+
+                return {
+                    positions: positionBuffer,
+                    colors: colorBuffer,
+                    uvs: texCoordLocation,
+                }
+
+            }
+
+            function startup() {
+                var image = new Image();
+                image.src = './test.jpg';
+                image.onload = function () {
+                    App.image = image;
+                    main();
+                }
+            }
+        </script>
+    </head>
+
+    <body>
+        <!-- <canvas id="glcanvas" width="640" height="480"></canvas> -->
+    </body>
+
+    <script>startup();</script>
+</html>

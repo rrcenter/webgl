@@ -1,0 +1,197 @@
+
+<!--
+    需要一个http服务器 
+
+    pos,color,uv
+    一次性提交,使用 drawElements 绘制纹理
+-->
+<html lang="en">
+    <head>
+        <!-- <script src="webgl-demo.js" type="module" defer></script> -->
+        <script>
+            var App = {}
+            App.step = 0.01;
+            App.startX = 0.8;
+            function loop()
+            {
+                const gl = App.gl;
+                const program = App.program;//get ref
+
+                //background
+                gl.clearColor(1, 0.5, 0.5, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                
+                const vao = App.vao;
+                gl.useProgram(program);
+                gl.bindBuffer(gl.ARRAY_BUFFER, vao);
+
+                var primitiveType = gl.TRIANGLES;
+                var offset = 0;
+                var count = 6;
+                // gl.drawArrays(primitiveType, offset, count);
+                var indexType = gl.UNSIGNED_SHORT;//小心这个类型, 
+                //UNSIGNED_INT:WebGL: INVALID_ENUM: drawElements: invalid type
+                //indexType = gl.UNSIGNED_INT;
+                gl.drawElements(primitiveType, count, indexType, offset);
+            }
+            
+            function main()
+            {
+                // const canvas = document.querySelector('#glcanvas');
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                document.querySelector('body').appendChild(canvas);
+
+                const gl = canvas.getContext('webgl');
+
+                // gl.POINTS
+                
+                if (gl === null) {
+                    alert('no webgl');
+                    return;
+                }
+
+
+                const vsSource = `
+                    // 设置浮点数据类型为中级精度
+                    precision mediump float;
+                    attribute vec3 aPos;
+                    attribute vec4 aColor;
+                    attribute vec2 a_texCoord;
+                    
+                    varying lowp vec4 vColor;
+                    varying vec2 v_texCoord;//=a_texCoord
+                    void main () {
+                        gl_Position = vec4(aPos, 1.0);
+                        vColor = aColor;
+                        v_texCoord = a_texCoord;
+                    }
+                `;
+                const fsSource = `
+                    precision mediump float;
+                    varying lowp vec4 vColor;
+                    // 从顶点着色器传入的纹理坐标
+                    varying vec2 v_texCoord;
+                    
+                    uniform sampler2D u_image;
+                    void main() {
+                        gl_FragColor = vColor;
+                        // gl_FragColor = texture2D(u_image, v_texCoord).brga;
+                        gl_FragColor = texture2D(u_image, v_texCoord);
+                    }
+                `;
+                const program = createShaderProgram(gl, vsSource, fsSource);
+                
+                App.program = program;//ref
+                App.gl = gl;
+
+                initData(gl);
+
+                const fps = (1.0 * 1000) / 60;
+                setInterval(loop,  fps);
+
+                gl.getv
+            }
+
+            function initData(gl) {
+                const program = App.program;
+                const pos_color = [
+                    // pos,         // color,            // uv
+                    -0.5, 0.5, 0,   1.0, 0.0, 0.0, 1.0,  0,0,       // tl
+                    -0.5, -0.5, 0,  0.0, 1.0, 0.0, 1.0,  0,1,       // bl
+                    0.5, -0.5, 0,   0.0, 0.0, 1.0, 1.0,  1,1,       // br
+                    0.5, 0.5, 0,    0.4, 0.5, 0.1, 1.0,  1,0,       // tr
+                ];
+
+                const indices = [
+                    0,1,2,
+                    2,3,0,
+                ];
+                
+                const buffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos_color), gl.STATIC_DRAW);
+
+                // 行数据信息
+                const floatSize = 4;    // 浮点数的字节数
+                const lineCount = 3 + 4 + 2;//每行元素的个数 3 pos, 4 color
+                const pixelBytesOfOneLine = floatSize * lineCount; // 每行元素的字节数
+                // gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, pixelBytesOfOneLine, 0);
+                /*
+                主要理解 vertexAttribPointer 中每个实参数的意义
+                */
+
+                const aPos = gl.getAttribLocation(program, 'aPos');
+                gl.enableVertexAttribArray(aPos);
+                gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, pixelBytesOfOneLine, 0);
+
+                // colors
+                const colorStartPos = 3 * floatSize;//在每行的第三个位置开始
+                const aColor = gl.getAttribLocation(program, 'aColor');
+                gl.enableVertexAttribArray(aColor);
+                gl.vertexAttribPointer(aColor, 4, gl.FLOAT, false, pixelBytesOfOneLine, colorStartPos);
+
+                // texture
+                const uvStartPos = 7 * floatSize;
+                const image = App.image;
+                const a_texCoord = gl.getAttribLocation(program, 'a_texCoord');
+                gl.enableVertexAttribArray(a_texCoord);
+                gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, pixelBytesOfOneLine, uvStartPos);
+
+                var texture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+                var ebo = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+                App.vao = buffer;
+            }
+            function createShaderProgram(gl, vsSource, fsSource) {
+                const vsShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fsShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                const shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vsShader);
+                gl.attachShader(shaderProgram, fsShader);
+                gl.linkProgram(shaderProgram);
+
+                console.log('createShaderProgram:', gl.getProgramInfoLog(shaderProgram));
+
+                return shaderProgram;
+            }
+
+            function loadShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+
+                console.log('loadShader:', gl.getShaderInfoLog(shader));
+
+                return shader;
+            }
+
+            function startup() {
+                var image = new Image();
+                image.src = './test.jpg';
+                image.onload = function () {
+                    App.image = image;
+                    main();
+                }
+            }
+        </script>
+    </head>
+
+    <body>
+        <!-- <canvas id="glcanvas" width="640" height="480"></canvas> -->
+    </body>
+
+    <script>startup();</script>
+</html>
