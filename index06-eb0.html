@@ -3,8 +3,6 @@
         <!-- <script src="webgl-demo.js" type="module" defer></script> -->
         <script>
             var App = {}
-            App.step = 0.01;
-            App.startX = 0.8;
             function loop()
             {
                 const gl = App.gl;
@@ -13,16 +11,6 @@
                 //background
                 gl.clearColor(0.5, 0.5, 0.5, 1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
-
-                var x = App.startX;
-                if (x > 1) {
-                    App.step = -App.step;
-                }
-                if (x < 0.1) {
-                    App.step = -App.step;
-                }
-                x = x + App.step;
-                App.startX = x;
                 
                 const vao = App.vao;
                 gl.useProgram(program);
