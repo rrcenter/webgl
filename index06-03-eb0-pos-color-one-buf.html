@@ -112,7 +112,7 @@
                 gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, pixelBytesOfOneLine, 0);
 
                 // colors
-                const colorStartPos = 3 * floatSize;//在每行的第三个位置开始
+                const colorStartPos = 3 * floatSize;//在每行的第三个位置开始, 下表从 0 开始
                 const aColor = gl.getAttribLocation(program, 'aColor');
                 gl.enableVertexAttribArray(aColor);
                 gl.vertexAttribPointer(aColor, 4, gl.FLOAT, false, pixelBytesOfOneLine, colorStartPos);
